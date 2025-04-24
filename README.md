@@ -1,4 +1,4 @@
-<img src="images/admin1.PNG" alt="Imagen admin1" width="300" />
+<img src="images/admin1.PNG" alt="Imagen admin1" width="600" />
 # Sistema-de-administraci-n
 Proyecto de ingeniería en software para el desarrollo de un sistema de administración de empleados.
 ## 1. Configuración del Entorno Virtual
