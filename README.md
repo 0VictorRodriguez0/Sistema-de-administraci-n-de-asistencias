@@ -2,7 +2,7 @@
 Proyecto de ingeniería en software para el desarrollo de un sistema de administración de empleados.
 ## 1. Configuración del Entorno Virtual
 Primero, debes crear y activar un entorno virtual para aislar las dependencias del proyecto. 
-Ejecuta los siguientes comandos en tu terminal **dentro de la carpeta** <span style="color:blue">`Asistente_Academico_`</span>:
+Ejecuta los siguientes comandos en tu terminal **dentro de la carpeta** <span style="color:blue">`Sistema de administración`</span>:
 
 
 
