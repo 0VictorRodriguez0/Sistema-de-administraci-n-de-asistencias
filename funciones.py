@@ -79,11 +79,14 @@ def eliminar_empleado(id_empleado):
         # Eliminar primero el horario asociado al empleado
         cursor.execute("DELETE FROM horario WHERE id_empleado = %s", (id_empleado,))
 
+        # Eliminar el usuario asociado al empleado
+        cursor.execute("DELETE FROM usuario WHERE id_empleado = %s", (id_empleado,))
+
         # Luego eliminar al empleado
         cursor.execute("DELETE FROM empleado WHERE id_empleado = %s", (id_empleado,))
         
         conn.commit()
-        st.success("Empleado y su horario eliminados correctamente.")
+        st.success("Empleado  eliminado correctamente.")
     except Exception as e:
         st.error(f"Error al eliminar empleado: {e}")
     finally:
