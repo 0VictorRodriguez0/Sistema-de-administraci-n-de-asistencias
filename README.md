@@ -30,3 +30,24 @@ Una vez que el entorno virtual esté activo, instala las librerías necesarias p
 ```bash
 pip install -r requirements.txt
 ```
+## 3. Importar la base de datos MySQL
+
+Antes de ejecutar la aplicación, asegúrate de importar el archivo `empleados.sql` en tu servidor de base de datos MySQL. Este archivo contiene la estructura y los datos iniciales necesarios para que el sistema funcione correctamente.
+
+## 4. Ejecutar la aplicación Streamlit
+
+Una vez configurado el entorno y la base de datos, ejecuta la aplicación correspondiente según el tipo de usuario:
+
+- Si deseas ejecutar la aplicación donde los empleados solo registran su asistencia, ejecuta:
+
+```bash
+streamlit run app_registro.py
+```
+Esta aplicación utiliza el script funciones_registro.py, que contiene la conexión a la base de datos y las funciones necesarias para validar el PIN del empleado y registrar su asistencia.
+
+- Si deseas ejecutar la aplicación del administrador, donde puedes crear nuevos usuarios, eliminarlos y editarlos, ejecuta:
+
+```bash
+streamlit run app.py
+```
+Esta aplicación depende del script funciones.py, que contiene la lógica de conexión a la base de datos y las funciones necesarias para gestionar los empleados.
