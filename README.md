@@ -38,14 +38,14 @@ Antes de ejecutar la aplicación, asegúrate de importar el archivo `empleados.s
 
 Una vez configurado el entorno y la base de datos, ejecuta la aplicación correspondiente según el tipo de usuario:
 
-- Si deseas ejecutar la aplicación donde los empleados solo registran su asistencia, ejecuta:
+- **Si deseas ejecutar la aplicación donde los empleados solo registran su asistencia, ejecuta**:
 
 ```bash
 streamlit run app_registro.py
 ```
 Esta aplicación utiliza el script funciones_registro.py, que contiene la conexión a la base de datos y las funciones necesarias para validar el PIN del empleado y registrar su asistencia.
 
-- Si deseas ejecutar la aplicación del administrador, donde puedes crear nuevos usuarios, eliminarlos y editarlos, ejecuta:
+- **Si deseas ejecutar la aplicación del administrador, donde puedes crear nuevos usuarios, eliminarlos y editarlos, ejecuta**:
 
 ```bash
 streamlit run app.py
