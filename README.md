@@ -51,3 +51,35 @@ Esta aplicación utiliza el script `funciones_registro.py`, que contiene la cone
 streamlit run app.py
 ```
 Esta aplicación depende del script `funciones.py`, que contiene la lógica de conexión a la base de datos y las funciones necesarias para gestionar los empleados.
+
+
+# Descripción de las páginas de la aplicación
+
+## Página de Administrador
+
+1. **Inicio de sesión del Administrador**
+   - La primera imagen muestra la página de inicio de sesión del administrador, donde se ingresan las credenciales de usuario y contraseña. En este caso, el usuario es "admin" y la contraseña es "admin".
+   ![Imagen admin1](images/admin1.png)
+
+2. **Agregar Nuevos Trabajadores**
+   - La siguiente página permite al administrador agregar nuevos trabajadores al sistema. En ella, se pueden ingresar los datos necesarios para registrar un nuevo empleado.
+   ![Imagen admin2](images/admin2.png)
+
+3. **Buscar, Cambiar o Eliminar Datos de Empleados**
+   - Esta página permite buscar a los empleados registrados y modificar sus datos o eliminarlos del sistema según sea necesario.
+   ![Imagen admin3](images/admin3.png)
+
+## Página de Registro
+
+1. **Registro de un Usuario (Primer Registro del Día)**
+   - La primera imagen muestra cómo se ve la página cuando un usuario se registra por primera vez en el día. Aquí, el sistema registra la entrada del usuario en el trabajo.
+   ![Imagen registro1](images/registro1.png)
+
+2. **Registro de un Usuario (Segundo Registro del Día)**
+   - La segunda imagen muestra el caso en que el usuario se ha registrado dos veces en el día, es decir, realizó tanto su entrada como su salida.
+   ![Imagen registro2](images/registro2.png)
+
+3. **Imposibilidad de Registrar una Salida Duplicada**
+   - La tercera imagen muestra que el sistema no permite que el usuario registre una salida si ya ha marcado su registro de salida previamente. Esto evita registros duplicados.
+   ![Imagen registro3](images/registro3.png)
+
