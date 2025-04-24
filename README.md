@@ -43,11 +43,11 @@ Una vez configurado el entorno y la base de datos, ejecuta la aplicación corres
 ```bash
 streamlit run app_registro.py
 ```
-Esta aplicación utiliza el script funciones_registro.py, que contiene la conexión a la base de datos y las funciones necesarias para validar el PIN del empleado y registrar su asistencia.
+Esta aplicación utiliza el script `funciones_registro.py`, que contiene la conexión a la base de datos y las funciones necesarias para validar el PIN del empleado y registrar su asistencia.
 
 - **Si deseas ejecutar la aplicación del administrador, donde puedes crear nuevos usuarios, eliminarlos y editarlos, ejecuta**:
 
 ```bash
 streamlit run app.py
 ```
-Esta aplicación depende del script funciones.py, que contiene la lógica de conexión a la base de datos y las funciones necesarias para gestionar los empleados.
+Esta aplicación depende del script `funciones.py`, que contiene la lógica de conexión a la base de datos y las funciones necesarias para gestionar los empleados.
