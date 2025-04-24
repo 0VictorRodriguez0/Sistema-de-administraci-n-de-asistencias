@@ -13,7 +13,7 @@ def get_connection():
 
 # Funciones CRUD
 # Función para agregar empleado y luego su horario
-def agregar_empleado(nombre, apellido, correo, telefono, puesto, rfc, fecha_nac, hora_inicio, hora_fin, dias_laborables):
+def agregar_empleado(nombre, apellido, correo, telefono, puesto, rfc, fecha_nac, hora_inicio, hora_fin, dias_laborables,pin):
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -39,8 +39,15 @@ def agregar_empleado(nombre, apellido, correo, telefono, puesto, rfc, fecha_nac,
             VALUES (%s, %s, %s, %s)
         """, (hora_inicio_str, hora_fin_str, dias_laborables, id_empleado))
 
+        cursor.execute("""
+            INSERT INTO usuario (pin, id_empleado)
+            VALUES (%s, %s)
+        """, (pin, id_empleado))
+
+        id_usuario = cursor.lastrowid
+
         conn.commit()
-        st.success(f"Empleado agregado exitosamente con ID: {id_empleado}")
+        st.success(f"Empleado agregado exitosamente con ID: {id_usuario} y PIN: {pin}")
 
     except Exception as e:
         st.error(f"Error al agregar empleado: {e}")

@@ -1,6 +1,7 @@
 import streamlit as st
 import unicodedata
 import datetime
+import random
 from funciones import agregar_empleado, obtener_empleados, eliminar_empleado, actualizar_empleado, verificar_login
 
 # Streamlit
@@ -71,10 +72,10 @@ else:
 
         dias_laborables = st.number_input("Días Laborables", min_value=1, max_value=7, value=5)
 
-
+        pin = random.randint(1000, 9999)
         if st.button("Guardar"):
             if nombre and apellido and correo and telefono and puesto and rfc and fecha_nac and hora_inicio and hora_fin and dias_laborables:
-                agregar_empleado(nombre, apellido, correo,telefono,puesto,rfc,fecha_nac,hora_inicio,hora_fin,dias_laborables)
+                agregar_empleado(nombre, apellido, correo,telefono,puesto,rfc,fecha_nac,hora_inicio,hora_fin,dias_laborables,pin)
                 st.success("Empleado agregado con éxito.")
             else:
                 st.warning("Completa todos los campos.")
