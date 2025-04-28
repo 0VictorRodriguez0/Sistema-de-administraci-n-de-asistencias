@@ -1,3 +1,4 @@
+# contiene funciones solo utilizadas en app.py
 from datetime import datetime
 import mysql.connector
 import streamlit as st
@@ -13,7 +14,7 @@ def get_connection():
 
 # Funciones CRUD
 # Función para agregar empleado y luego su horario
-def agregar_empleado(nombre, apellido, correo, telefono, puesto, rfc, fecha_nac, hora_inicio, hora_fin, dias_laborables,pin):
+def agregar_empleado(nombre, apellido, correo, telefono, puesto, departamento, rfc, fecha_nac, hora_inicio, hora_fin, dias_laborables,pin):
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -26,9 +27,9 @@ def agregar_empleado(nombre, apellido, correo, telefono, puesto, rfc, fecha_nac,
 
         # Insertar empleado
         cursor.execute("""
-            INSERT INTO empleado (nombre, apellido, correo, telefono, puesto, rfc, fecha_nac)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (nombre, apellido, correo, telefono_str, puesto, rfc, fecha_nac_str))
+            INSERT INTO empleado (nombre, apellido, correo, telefono, puesto, departamento, rfc, fecha_nac)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (nombre, apellido, correo, telefono_str, puesto, departamento, rfc, fecha_nac_str))
 
         # Obtener el id del nuevo empleado
         id_empleado = cursor.lastrowid
@@ -60,7 +61,7 @@ def obtener_empleados():
     cursor = conn.cursor()
     # Unir las tablas empleado y horario por id_empleado
     cursor.execute("""
-        SELECT e.id_empleado, e.nombre, e.apellido, e.correo, e.telefono, e.puesto, e.rfc, e.fecha_nac, 
+        SELECT e.id_empleado, e.nombre, e.apellido, e.correo, e.telefono, e.puesto, e.departamento, e.rfc, e.fecha_nac, 
                h.hora_inicio, h.hora_fin, h.dias_laborables 
         FROM empleado e
         JOIN horario h ON e.id_empleado = h.id_empleado
@@ -93,7 +94,7 @@ def eliminar_empleado(id_empleado):
         conn.close()
 
 
-def actualizar_empleado(id_empleado, nombre, apellido, correo, telefono, puesto, rfc, fecha_nac, hora_inicio, hora_fin, dias_laborables):
+def actualizar_empleado(id_empleado, nombre, apellido, correo, telefono, puesto, departamento, rfc, fecha_nac, hora_inicio, hora_fin, dias_laborables):
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -101,9 +102,9 @@ def actualizar_empleado(id_empleado, nombre, apellido, correo, telefono, puesto,
         # Actualizar los datos del empleado
         cursor.execute("""
             UPDATE empleado 
-            SET nombre = %s, apellido = %s, correo = %s, telefono = %s, puesto = %s, rfc = %s, fecha_nac = %s 
+            SET nombre = %s, apellido = %s, correo = %s, telefono = %s, puesto = %s, departamento = %s, rfc = %s, fecha_nac = %s 
             WHERE id_empleado = %s
-        """, (nombre, apellido, correo, telefono, puesto, rfc, fecha_nac, id_empleado))
+        """, (nombre, apellido, correo, telefono, puesto, departamento, rfc, fecha_nac, id_empleado))
 
         # Actualizar el horario del empleado
         cursor.execute("""

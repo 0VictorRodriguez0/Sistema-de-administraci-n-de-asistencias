@@ -58,24 +58,28 @@ else:
         with col5:
             puesto = st.text_input("Puesto")
         with col6:
-            rfc = st.text_input("RFC")
-
-        fecha_nac = st.date_input("Fecha de Nacimiento",min_value=datetime.date(1950, 1, 1),max_value=datetime.date.today())
-
-        st.markdown("---")  # Línea divisoria opcional
+            departamento = st.text_input("departamento")
 
         col7, col8 = st.columns(2)
         with col7:
-            hora_inicio = st.time_input("Hora de Inicio")
+            rfc = st.text_input("RFC")
         with col8:
+            fecha_nac = st.date_input("Fecha de Nacimiento",min_value=datetime.date(1950, 1, 1),max_value=datetime.date.today())
+
+        st.markdown("---")  # Línea divisoria opcional
+
+        col9, col10 = st.columns(2)
+        with col9:
+            hora_inicio = st.time_input("Hora de Inicio")
+        with col10:
             hora_fin = st.time_input("Hora de Fin")
 
         dias_laborables = st.number_input("Días Laborables", min_value=1, max_value=7, value=5)
 
         pin = random.randint(1000, 9999)
         if st.button("Guardar"):
-            if nombre and apellido and correo and telefono and puesto and rfc and fecha_nac and hora_inicio and hora_fin and dias_laborables:
-                agregar_empleado(nombre, apellido, correo,telefono,puesto,rfc,fecha_nac,hora_inicio,hora_fin,dias_laborables,pin)
+            if nombre and apellido and correo and telefono and puesto and departamento and rfc and fecha_nac and hora_inicio and hora_fin and dias_laborables:
+                agregar_empleado(nombre, apellido, correo,telefono,puesto,departamento,rfc,fecha_nac,hora_inicio,hora_fin,dias_laborables,pin)
                 st.success("Empleado agregado con éxito.")
             else:
                 st.warning("Completa todos los campos.")
@@ -99,13 +103,14 @@ else:
 
         #mostrar los empleados filtrados
         for index, emp in enumerate(empleados):
-            id_emp, nombre, apellido, correo, telefono, puesto, rfc, fecha_nac, hora_inicio, hora_fin, dias_laborables = emp
+            id_emp, nombre, apellido, correo, telefono, puesto, departamento, rfc, fecha_nac, hora_inicio, hora_fin, dias_laborables = emp
             with st.expander(f"{nombre} {apellido}"):
 
                 st.write(f"ID: {id_emp}")
                 st.write(f"Correo: {correo}")
                 st.write(f"Teléfono: {telefono}")
                 st.write(f"Puesto: {puesto}")
+                st.write(f"Puesto: {departamento}")
                 st.write(f"RFC: {rfc}")
                 st.write(f"Fecha de Nacimiento: {fecha_nac}")
 
@@ -115,6 +120,7 @@ else:
                 nuevo_correo = st.text_input("Nuevo Correo", correo, key=f"correo_{id_emp}_{index}")
                 nuevo_telefono = st.text_input("Nuevo Teléfono", telefono, key=f"telefono_{id_emp}_{index}")
                 nuevo_puesto = st.text_input("Nuevo Puesto", puesto, key=f"puesto_{id_emp}_{index}")
+                nuevo_departamento = st.text_input("Nuevo Departamento", departamento, key=f"departamento_{id_emp}_{index}")
                 nuevo_rfc = st.text_input("Nuevo RFC", rfc, key=f"rfc_{id_emp}_{index}")
                 nuevo_fecha_nac = st.date_input("Nueva Fecha de Nacimiento", fecha_nac, key=f"fecha_nac_{id_emp}_{index}")
 
@@ -136,7 +142,7 @@ else:
                 with colguardar:
                     if st.button("Guardar Cambios", key=f"guardar_{id_emp}_{index}"):  # Añadir el índice para que sea único
                         # Actualizar empleado y horario
-                        actualizar_empleado(id_emp, nuevo_nombre, nuevo_apellido, nuevo_correo, nuevo_telefono, nuevo_puesto, nuevo_rfc, nuevo_fecha_nac, nuevo_hora_inicio, nuevo_hora_fin, nuevo_dias_laborables)
+                        actualizar_empleado(id_emp, nuevo_nombre, nuevo_apellido, nuevo_correo, nuevo_telefono, nuevo_puesto, nuevo_departamento, nuevo_rfc, nuevo_fecha_nac, nuevo_hora_inicio, nuevo_hora_fin, nuevo_dias_laborables)
                         st.rerun()  # Actualizar la página para reflejar los cambios
 
                 with coleliminar:

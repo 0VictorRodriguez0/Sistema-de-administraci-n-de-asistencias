@@ -1,3 +1,4 @@
+# contiene funciones solo utilizadas en app_registro.py
 import mysql.connector
 from datetime import datetime
 
