@@ -2,7 +2,9 @@ import streamlit as st
 import unicodedata
 import datetime
 import random
-from funciones import agregar_empleado, obtener_empleados, eliminar_empleado, actualizar_empleado, verificar_login
+import pandas as pd
+import plotly.express as px
+from funciones import agregar_empleado, obtener_empleados, eliminar_empleado, actualizar_empleado, verificar_login, get_connection
 
 # Streamlit
 st.set_page_config(page_title="CRUD Empleados", layout="centered")
@@ -31,7 +33,7 @@ if not st.session_state["logged_in"]:
             st.warning("Por favor ingresa usuario y contraseña.")
 else:
     # Si el usuario está logueado, muestra el menú de operaciones
-    menu = st.sidebar.radio("Menú", ["Agregar Empleado", "Ver Empleados"])
+    menu = st.sidebar.radio("Menú", ["Agregar Empleado", "Ver Empleados", "Dashboard Asistencia", "Dashboard Salarios", "Reporte"])
 
     # Cerrar sesión en la sidebar
     if st.sidebar.button("Cerrar sesión"):
@@ -99,8 +101,6 @@ else:
             empleados = [emp for emp in empleados if 
                      search_term_normalized in unicodedata.normalize('NFD', (emp[1] + " " + emp[2])).encode('ascii', 'ignore').decode('utf-8').lower()]
 
-
-
         #mostrar los empleados filtrados
         for index, emp in enumerate(empleados):
             id_emp, nombre, apellido, correo, telefono, puesto, departamento, rfc, fecha_nac, hora_inicio, hora_fin, dias_laborables = emp
@@ -150,3 +150,121 @@ else:
                         eliminar_empleado(id_emp)
                         st.warning("Empleado y su horario eliminados.")
                         st.rerun()  # Actualizar la página para reflejar los cambios
+
+    # Dashboard de asistencia
+    elif menu == "Dashboard Asistencia":
+        st.subheader("Asistencia")
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                SELECT 
+                fecha AS fecha,
+                COUNT(*) AS total_asistencias
+            FROM 
+                asistencia
+            GROUP BY 
+                fecha
+            ORDER BY 
+                fecha;
+            """)
+            datos_asistencia = cursor.fetchall()
+
+            if datos_asistencia:
+                
+                df_asistencia = pd.DataFrame(datos_asistencia, columns=["Fecha", "Registros"])
+            
+                fig1 = px.line(df_asistencia, x="Fecha", y="Registros",
+                           title="Registros de Asistencia por Fecha", markers=True)
+                
+                st.plotly_chart(fig1)
+
+            else:
+                st.info("No hay datos de asistencia registrados.")
+        
+            cursor.execute("""
+                SELECT 
+                    fecha,
+                    ROUND(AVG(TIMESTAMPDIFF(SECOND, hora_entrada, hora_salida) / 3600), 2) AS horas_promedio
+                FROM 
+                    asistencia
+                WHERE 
+                    hora_entrada IS NOT NULL AND hora_salida IS NOT NULL
+                GROUP BY 
+                    fecha
+                ORDER BY 
+                    fecha;
+            """)
+
+            datos_horas = cursor.fetchall()
+
+            if datos_horas:
+                df_horas = pd.DataFrame(datos_horas, columns=["Fecha", "Horas promedio"])
+                fig2 = px.line(df_horas, x="Fecha", y="Horas promedio",
+                            title=" Horas Promedio Trabajadas por Día", markers=True)
+                st.plotly_chart(fig2)
+            else:
+                st.info("No hay datos suficientes para calcular horas promedio.")
+
+        except Exception as e:
+            st.error(f" Error al obtener datos del dashboard de asistencia: {e}")
+
+        finally:
+            cursor.close()
+            conn.close()
+    
+        # Reporte
+    elif menu == "Reporte":
+        st.subheader("Reporte General")
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                SELECT 
+                    e.nombre,
+                    e.apellido,
+                    e.correo,
+                    e.telefono,
+                    e.puesto,
+                    e.departamento,
+                    e.rfc,
+                    e.fecha_nac,
+                    a.fecha,
+                    a.hora_entrada,
+                    a.hora_salida,
+                    TIMESTAMPDIFF(MINUTE, a.hora_entrada, a.hora_salida)/60 AS horas_trabajadas
+                FROM 
+                    empleado e
+                JOIN 
+                    asistencia a ON e.id_empleado = a.id_empleado
+                ORDER BY 
+                    a.fecha;
+            """)
+            reporte = cursor.fetchall()
+
+            if reporte:
+                df_reporte = pd.DataFrame(reporte, columns=[
+                    "Nombre", "Apellido", "Correo", "Teléfono", "Puesto", "Departamento",
+                    "RFC", "Fecha Nacimiento", "Fecha", "Hora Entrada", "Hora Salida", "Horas Trabajadas"
+                ])
+                st.dataframe(df_reporte)
+
+                csv = df_reporte.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="Descargar Reporte CSV",
+                    data=csv,
+                    file_name="reporte_general.csv",
+                    mime="text/csv"
+                )
+            else:
+                st.info("No hay registros disponibles para el reporte.")
+
+        except Exception as e:
+            st.error(f"Error al generar el reporte: {e}")
+        finally:
+            cursor.close()
+            conn.close()

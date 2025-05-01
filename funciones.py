@@ -9,7 +9,7 @@ def get_connection():
         host="localhost",
         user="root",
         password="",
-        database="empleados"
+        database="crud_empleados"
     )
 
 # Funciones CRUD
