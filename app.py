@@ -214,6 +214,53 @@ else:
         finally:
             cursor.close()
             conn.close()
+
+        # Dashboard Salarios
+    elif menu == "Dashboard Salarios":
+        st.subheader("Dashboard de Salarios")
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                SELECT 
+                    e.id_empleado,
+                    CONCAT(e.nombre, ' ', e.apellido) AS nombre_completo,
+                    DATE_FORMAT(n.fecha, '%Y-%m') AS mes,
+                    SUM(n.total_pago) AS total_pagado
+                FROM 
+                    nomina n
+                JOIN 
+                    empleado e ON e.id_empleado = n.id_empleado
+                GROUP BY 
+                    e.id_empleado, mes
+                ORDER BY 
+                    mes, nombre_completo;
+            """)
+
+            resultados = cursor.fetchall()
+
+            if resultados:
+                df_salarios = pd.DataFrame(resultados, columns=["ID Empleado", "Nombre", "Mes", "Total Pagado"])
+                st.dataframe(df_salarios)
+
+                fig = px.bar(df_salarios, 
+                             x="Mes", 
+                             y="Total Pagado", 
+                             color="Nombre", 
+                             barmode="group", 
+                             title="Total Pagado por Empleado y Mes")
+                st.plotly_chart(fig)
+            else:
+                st.info("No hay registros de salarios disponibles.")
+
+        except Exception as e:
+            st.error(f"Error al cargar el dashboard de salarios: {e}")
+
+        finally:
+            cursor.close()
+            conn.close()
     
         # Reporte
     elif menu == "Reporte":
