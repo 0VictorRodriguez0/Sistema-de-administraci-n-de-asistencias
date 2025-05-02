@@ -309,9 +309,72 @@ else:
                 )
             else:
                 st.info("No hay registros disponibles para el reporte.")
+        
+               # Reporte mensual
+            st.markdown("## Reporte Mensual")
+
+            # Obtener meses disponibles
+            cursor.execute("SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes FROM asistencia ORDER BY mes DESC")
+            meses_disponibles = [fila[0] for fila in cursor.fetchall()]
+
+            # Selección de mes
+            mes_seleccionado = st.selectbox("Selecciona un mes", meses_disponibles)
+
+            if mes_seleccionado:
+                cursor.execute("""
+                    SELECT 
+                        e.id_empleado,
+                        CONCAT(e.nombre, ' ', e.apellido) AS nombre_completo,
+                        COUNT(DISTINCT a.fecha) AS dias_asistidos,
+                        ROUND(SUM(
+                            CASE 
+                                WHEN a.hora_entrada IS NOT NULL AND a.hora_salida IS NOT NULL 
+                                THEN TIMESTAMPDIFF(MINUTE, a.hora_entrada, a.hora_salida) 
+                                ELSE 0 
+                            END
+                        ) / 60, 2) AS horas_totales,
+                        ROUND(AVG(
+                            CASE 
+                                WHEN a.hora_entrada IS NOT NULL AND a.hora_salida IS NOT NULL 
+                                THEN TIMESTAMPDIFF(MINUTE, a.hora_entrada, a.hora_salida) 
+                                ELSE NULL
+                            END
+                        ) / 60, 2) AS horas_promedio_dia
+                    FROM 
+                        empleado e
+                    LEFT JOIN 
+                        asistencia a ON e.id_empleado = a.id_empleado
+                        AND DATE_FORMAT(a.fecha, '%Y-%m') = %s
+                    GROUP BY 
+                        e.id_empleado
+                    ORDER BY 
+                        nombre_completo;
+                """, (mes_seleccionado,))
+                resumen_mensual = cursor.fetchall()
+
+                if resumen_mensual:
+                    df_mensual = pd.DataFrame(resumen_mensual, columns=[
+                        "ID Empleado", "Nombre", "Días Asistidos", "Horas Totales", "Horas Promedio por Día"
+                    ])
+
+                    # Reemplazar NaN por 0 en caso de empleados sin registros
+                    df_mensual.fillna(0, inplace=True)
+
+                    st.dataframe(df_mensual)
+
+                    csv_mensual = df_mensual.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="Descargar Reporte Mensual CSV",
+                        data=csv_mensual,
+                        file_name=f"reporte_mensual_{mes_seleccionado}.csv",
+                        mime="text/csv"
+                    )
+                else:
+                    st.info("No hay datos disponibles para el mes seleccionado.")
 
         except Exception as e:
             st.error(f"Error al generar el reporte: {e}")
+
         finally:
             cursor.close()
             conn.close()
