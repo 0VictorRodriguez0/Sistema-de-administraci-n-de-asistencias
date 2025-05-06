@@ -153,214 +153,115 @@ else:
 
     # Dashboard de asistencia
     elif menu == "Dashboard Asistencia":
-        st.subheader("Asistencia")
+        from funciones import (
+            obtener_totales_asistencia_por_fecha,
+            obtener_promedio_horas_por_fecha
+        )
 
-        conn = get_connection()
-        cursor = conn.cursor()
+        st.subheader("Dashboard de Asistencia")
 
         try:
-            cursor.execute("""
-                SELECT 
-                fecha AS fecha,
-                COUNT(*) AS total_asistencias
-            FROM 
-                asistencia
-            GROUP BY 
-                fecha
-            ORDER BY 
-                fecha;
-            """)
-            datos_asistencia = cursor.fetchall()
+            df_asistencia = obtener_totales_asistencia_por_fecha()
 
-            if datos_asistencia:
-                
-                df_asistencia = pd.DataFrame(datos_asistencia, columns=["Fecha", "Registros"])
-            
-                fig1 = px.line(df_asistencia, x="Fecha", y="Registros",
-                           title="Registros de Asistencia por Fecha", markers=True)
-                
+            if not df_asistencia.empty:
+                fig1 = px.line(
+                    df_asistencia, 
+                    x="fecha", 
+                    y="total_asistencias",
+                    title="Registros de Asistencia por Fecha", 
+                    markers=True
+                )
                 st.plotly_chart(fig1)
-
             else:
                 st.info("No hay datos de asistencia registrados.")
-        
-            cursor.execute("""
-                SELECT 
-                    fecha,
-                    ROUND(AVG(TIMESTAMPDIFF(SECOND, hora_entrada, hora_salida) / 3600), 2) AS horas_promedio
-                FROM 
-                    asistencia
-                WHERE 
-                    hora_entrada IS NOT NULL AND hora_salida IS NOT NULL
-                GROUP BY 
-                    fecha
-                ORDER BY 
-                    fecha;
-            """)
 
-            datos_horas = cursor.fetchall()
+            df_horas = obtener_promedio_horas_por_fecha()
 
-            if datos_horas:
-                df_horas = pd.DataFrame(datos_horas, columns=["Fecha", "Horas promedio"])
-                fig2 = px.line(df_horas, x="Fecha", y="Horas promedio",
-                            title=" Horas Promedio Trabajadas por Día", markers=True)
+            if not df_horas.empty:
+                fig2 = px.line(
+                    df_horas, 
+                    x="fecha", 
+                    y="horas_promedio",
+                    title="Horas Promedio Trabajadas por Día", 
+                    markers=True
+                )
                 st.plotly_chart(fig2)
             else:
                 st.info("No hay datos suficientes para calcular horas promedio.")
 
         except Exception as e:
-            st.error(f" Error al obtener datos del dashboard de asistencia: {e}")
+            st.error(f"Error al obtener datos del dashboard de asistencia: {e}")
 
-        finally:
-            cursor.close()
-            conn.close()
+
 
              # Dashboard Salarios
     elif menu == "Dashboard Salarios":
+        from funciones import (
+            obtener_total_pagado_mes,
+            obtener_total_pagado_por_departamento,
+            obtener_meses_nomina
+        )
+
         st.subheader("Dashboard de Salarios")
 
-        conn = get_connection()
-        cursor = conn.cursor()
-
         try:
-            # Tipo de agrupación
-            tipo_agrupacion = st.selectbox("Agrupar por", ["Mes", "Quincena"])
+            meses_disponibles = obtener_meses_nomina()
+            if not meses_disponibles:
+                st.info("No hay registros de nómina disponibles.")
+            else:
+                mes_reciente = meses_disponibles[0]  # más reciente por orden DESC
 
-            # Obtener meses disponibles
-            cursor.execute("SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes FROM nomina ORDER BY mes DESC")
-            meses_disponibles = [fila[0] for fila in cursor.fetchall()]
+                # Gráfico de barras por empleado
+                df_salarios = obtener_total_pagado_mes(mes_reciente)
 
-            mes_seleccionado = st.selectbox("Selecciona un mes", meses_disponibles)
-
-            if mes_seleccionado:
-                if tipo_agrupacion == "Mes":
-                    cursor.execute("""
-                        SELECT 
-                            e.id_empleado,
-                            %s AS mes,
-                            COALESCE(SUM(n.total_pago), 0) AS total_pagado
-                        FROM 
-                            empleado e
-                        LEFT JOIN 
-                            nomina n ON e.id_empleado = n.id_empleado 
-                            AND DATE_FORMAT(n.fecha, '%Y-%m') = %s
-                        GROUP BY 
-                            e.id_empleado
-                        ORDER BY 
-                            total_pagado DESC;
-                    """, (mes_seleccionado, mes_seleccionado))
-
-                    resultados = cursor.fetchall()
-                    df_salarios = pd.DataFrame(resultados, columns=[
-                        "ID Empleado", "Mes", "Total Pagado"
-                    ])
-
-                    st.dataframe(df_salarios)
-
-                    fig = px.bar(df_salarios, 
-                                 x="ID Empleado", 
-                                 y="Total Pagado", 
-                                 title=f"Total Pagado por Empleado en {mes_seleccionado}")
-                    st.plotly_chart(fig)
-
-                    csv = df_salarios.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="Descargar Reporte Mensual CSV",
-                        data=csv,
-                        file_name=f"salarios_{mes_seleccionado}.csv",
-                        mime="text/csv"
+                if not df_salarios.empty:
+                    fig = px.bar(
+                        df_salarios,
+                        x="id_empleado",
+                        y="total_pagado",
+                        title=f"Total Pagado por Empleado en {mes_reciente}"
                     )
-
-                elif tipo_agrupacion == "Quincena":
-                    quincena_seleccionada = st.selectbox("Selecciona una quincena", ["1ra Quincena", "2da Quincena"])
-
-                    if quincena_seleccionada == "1ra Quincena":
-                        dia_inicio, dia_fin = 1, 15
-                    else:
-                        dia_inicio, dia_fin = 16, 31
-
-                    cursor.execute(f"""
-                        SELECT 
-                            e.id_empleado,
-                            '{quincena_seleccionada}' AS quincena,
-                            COALESCE(SUM(n.total_pago), 0) AS total_pagado
-                        FROM 
-                            empleado e
-                        LEFT JOIN 
-                            nomina n ON e.id_empleado = n.id_empleado
-                            AND DATE_FORMAT(n.fecha, '%Y-%m') = %s
-                            AND DAY(n.fecha) BETWEEN %s AND %s
-                        GROUP BY 
-                            e.id_empleado
-                        ORDER BY 
-                            total_pagado DESC;
-                    """, (mes_seleccionado, dia_inicio, dia_fin))
-                    resultados = cursor.fetchall()
-
-                    df_quincena = pd.DataFrame(resultados, columns=[
-                        "ID Empleado", "Quincena", "Total Pagado"
-                    ])
-
-                    st.dataframe(df_quincena)
-
-                    fig = px.bar(df_quincena,
-                                 x="ID Empleado",
-                                 y="Total Pagado",
-                                 title=f"Total Pagado por Empleado en {quincena_seleccionada} de {mes_seleccionado}")
                     st.plotly_chart(fig)
+                else:
+                    st.info(f"No hay pagos registrados en {mes_reciente}.")
 
-                    csv = df_quincena.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="Descargar Reporte Quincenal CSV",
-                        data=csv,
-                        file_name=f"salarios_{mes_seleccionado}_{quincena_seleccionada.replace(' ', '_')}.csv",
-                        mime="text/csv"
+                # Gráfico de pastel por departamento
+                df_departamentos = obtener_total_pagado_por_departamento(mes_reciente)
+
+                if not df_departamentos.empty:
+                    pie_chart = px.pie(
+                        df_departamentos,
+                        names="departamento",
+                        values="total_pagado",
+                        title=f"Distribución de Salarios por Departamento ({mes_reciente})",
+                        hole=0.3  # estilo de dona
                     )
+                    pie_chart.update_traces(textposition='inside', textinfo='percent+label')
+                    st.plotly_chart(pie_chart)
+                else:
+                    st.info("No hay datos de departamentos disponibles.")
 
         except Exception as e:
             st.error(f"Error al cargar el dashboard de salarios: {e}")
 
-        finally:
-            cursor.close()
-            conn.close()
-
-    
         # Reporte
     elif menu == "Reporte":
+        from funciones import (
+            obtener_reporte_general, 
+            obtener_meses_asistencia, 
+            obtener_reporte_mensual,
+            obtener_total_pagado_mes,
+            obtener_total_pagado_quincena,
+            obtener_meses_nomina
+        )
+
         st.subheader("Reporte General")
 
-        conn = get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                SELECT 
-                    e.nombre,
-                    e.apellido,
-                    e.correo,
-                    e.telefono,
-                    e.puesto,
-                    e.departamento,
-                    e.rfc,
-                    e.fecha_nac,
-                    a.fecha,
-                    a.hora_entrada,
-                    a.hora_salida,
-                    TIMESTAMPDIFF(MINUTE, a.hora_entrada, a.hora_salida)/60 AS horas_trabajadas
-                FROM 
-                    empleado e
-                JOIN 
-                    asistencia a ON e.id_empleado = a.id_empleado
-                ORDER BY 
-                    a.fecha;
-            """)
-            reporte = cursor.fetchall()
+            # Reporte detallado por asistencia individual
+            df_reporte = obtener_reporte_general()
 
-            if reporte:
-                df_reporte = pd.DataFrame(reporte, columns=[
-                    "Nombre", "Apellido", "Correo", "Teléfono", "Puesto", "Departamento",
-                    "RFC", "Fecha Nacimiento", "Fecha", "Hora Entrada", "Hora Salida", "Horas Trabajadas"
-                ])
+            if not df_reporte.empty:
                 st.dataframe(df_reporte)
 
                 csv = df_reporte.to_csv(index=False).encode('utf-8')
@@ -371,70 +272,77 @@ else:
                     mime="text/csv"
                 )
             else:
-                st.info("No hay registros disponibles para el reporte.")
-        
-               # Reporte mensual
-            st.markdown("## Reporte Mensual")
+                st.info("No hay registros disponibles para el reporte general.")
 
-            cursor.execute("SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes FROM asistencia ORDER BY mes DESC")
-            meses_disponibles = [fila[0] for fila in cursor.fetchall()]
+            # Reporte mensual de asistencia (resumido por empleado)
+            st.markdown("## Reporte Mensual de Asistencia")
 
-            mes_seleccionado = st.selectbox("Selecciona un mes", meses_disponibles)
+            meses_disponibles = obtener_meses_asistencia()
+            mes_asistencia = st.selectbox("Selecciona un mes de asistencia", meses_disponibles, key="mes_asistencia")
 
-            if mes_seleccionado:
-                cursor.execute("""
-                    SELECT 
-                        e.id_empleado,
-                        CONCAT(e.nombre, ' ', e.apellido) AS nombre_completo,
-                        COUNT(DISTINCT a.fecha) AS dias_asistidos,
-                        ROUND(SUM(
-                            CASE 
-                                WHEN a.hora_entrada IS NOT NULL AND a.hora_salida IS NOT NULL 
-                                THEN TIMESTAMPDIFF(MINUTE, a.hora_entrada, a.hora_salida) 
-                                ELSE 0 
-                            END
-                        ) / 60, 2) AS horas_totales,
-                        ROUND(AVG(
-                            CASE 
-                                WHEN a.hora_entrada IS NOT NULL AND a.hora_salida IS NOT NULL 
-                                THEN TIMESTAMPDIFF(MINUTE, a.hora_entrada, a.hora_salida) 
-                                ELSE NULL
-                            END
-                        ) / 60, 2) AS horas_promedio_dia
-                    FROM 
-                        empleado e
-                    LEFT JOIN 
-                        asistencia a ON e.id_empleado = a.id_empleado
-                        AND DATE_FORMAT(a.fecha, '%Y-%m') = %s
-                    GROUP BY 
-                        e.id_empleado
-                    ORDER BY 
-                        nombre_completo;
-                """, (mes_seleccionado,))
-                resumen_mensual = cursor.fetchall()
+            if mes_asistencia:
+                df_mensual = obtener_reporte_mensual(mes_asistencia)
 
-                if resumen_mensual:
-                    df_mensual = pd.DataFrame(resumen_mensual, columns=[
-                        "ID Empleado", "Nombre", "Días Asistidos", "Horas Totales", "Horas Promedio por Día"
-                    ])
-
-                    df_mensual.fillna(0, inplace=True)
-
+                if not df_mensual.empty:
                     st.dataframe(df_mensual)
 
                     csv_mensual = df_mensual.to_csv(index=False).encode('utf-8')
                     st.download_button(
                         label="Descargar Reporte Mensual CSV",
                         data=csv_mensual,
-                        file_name=f"reporte_mensual_{mes_seleccionado}.csv",
+                        file_name=f"reporte_mensual_{mes_asistencia}.csv",
                         mime="text/csv"
                     )
                 else:
                     st.info("No hay datos disponibles para el mes seleccionado.")
 
+            # Resumen de nómina mensual por empleado (con selector independiente)
+            st.markdown("## Resumen de Nómina Mensual")
+
+            meses_nomina = obtener_meses_nomina()
+            mes_nomina = st.selectbox("Selecciona un mes de nómina", meses_nomina, key="mes_nomina")
+
+            if mes_nomina:
+                df_nomina_mes = obtener_total_pagado_mes(mes_nomina)
+
+                if not df_nomina_mes.empty:
+                    st.dataframe(df_nomina_mes)
+
+                    csv_nomina = df_nomina_mes.to_csv(index=False).encode("utf-8")
+                    st.download_button(
+                        label="Descargar Nómina Mensual CSV",
+                        data=csv_nomina,
+                        file_name=f"nomina_mensual_{mes_nomina}.csv",
+                        mime="text/csv"
+                    )
+                else:
+                    st.info("No hay datos de nómina para este mes.")
+
+            # Resumen de nómina quincenal por empleado (con selector propio)
+            st.markdown("## Resumen de Nómina por Quincena")
+
+            mes_quincena = st.selectbox("Selecciona un mes de quincena", meses_nomina, key="mes_quincena")
+            quincena_seleccionada = st.selectbox("Selecciona una quincena", ["1ra Quincena", "2da Quincena"])
+
+            if mes_quincena and quincena_seleccionada:
+                dia_inicio, dia_fin = (1, 15) if quincena_seleccionada == "1ra Quincena" else (16, 31)
+
+                df_nomina_quincena = obtener_total_pagado_quincena(
+                    mes_quincena, dia_inicio, dia_fin, quincena_seleccionada
+                )
+
+                if not df_nomina_quincena.empty:
+                    st.dataframe(df_nomina_quincena)
+
+                    csv_quincenal = df_nomina_quincena.to_csv(index=False).encode("utf-8")
+                    st.download_button(
+                        label="Descargar Nómina Quincenal CSV",
+                        data=csv_quincenal,
+                        file_name=f"nomina_quincenal_{mes_quincena}_{quincena_seleccionada.replace(' ', '_')}.csv",
+                        mime="text/csv"
+                    )
+                else:
+                    st.info("No hay datos de nómina para esta quincena.")
+
         except Exception as e:
             st.error(f"Error al generar el reporte: {e}")
-
-        finally:
-            cursor.close()
-            conn.close()

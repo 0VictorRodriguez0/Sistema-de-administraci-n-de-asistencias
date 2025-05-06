@@ -2,6 +2,7 @@
 from datetime import datetime
 import mysql.connector
 import streamlit as st
+import pandas as pd
 
 # Configurar conexión
 def get_connection():
@@ -130,3 +131,196 @@ def verificar_login(usuario, contraseña):
     result = cursor.fetchone()
     conn.close()
     return result is not None
+
+# cantidad de asistencias por fecha
+def obtener_totales_asistencia_por_fecha():
+    conn = get_connection()
+    query = """
+        SELECT 
+            fecha,
+            COUNT(*) AS total_asistencias
+        FROM 
+            asistencia
+        GROUP BY 
+            fecha
+        ORDER BY 
+            fecha;
+    """
+    df = pd.read_sql(query, conn) 
+    conn.close()
+    return df
+
+# horas promedio trabajadas por fecha
+def obtener_promedio_horas_por_fecha():
+    conn = get_connection()
+    query = """
+        SELECT 
+            fecha,
+            ROUND(AVG(TIMESTAMPDIFF(SECOND, hora_entrada, hora_salida) / 3600), 2) AS horas_promedio
+        FROM 
+            asistencia
+        WHERE 
+            hora_entrada IS NOT NULL AND hora_salida IS NOT NULL
+        GROUP BY 
+            fecha
+        ORDER BY 
+            fecha;
+    """
+    df = pd.read_sql(query, conn) 
+    conn.close()
+    return df
+
+# Obtener lista de meses disponibles con registros en nómina
+def obtener_meses_nomina():
+    conn = get_connection()
+    query = """
+        SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes 
+        FROM nomina 
+        ORDER BY mes DESC;
+    """
+    df = pd.read_sql(query, conn)
+    conn.close()
+    return df["mes"].tolist()
+
+# Obtener pagos totales por empleado en un mes
+def obtener_total_pagado_mes(mes):
+    conn = get_connection()
+    query = """
+        SELECT 
+            e.id_empleado,
+            %s AS mes,
+            COALESCE(SUM(n.total_pago), 0) AS total_pagado
+        FROM 
+            empleado e
+        LEFT JOIN 
+            nomina n ON e.id_empleado = n.id_empleado 
+            AND DATE_FORMAT(n.fecha, '%Y-%m') = %s
+        GROUP BY 
+            e.id_empleado
+        ORDER BY 
+            total_pagado DESC;
+    """
+    df = pd.read_sql(query, conn, params=(mes, mes))
+    conn.close()
+    return df
+
+# Obtener pagos totales por quincena en un mes
+def obtener_total_pagado_quincena(mes, dia_inicio, dia_fin, quincena_nombre):
+    conn = get_connection()
+    query = f"""
+        SELECT 
+            e.id_empleado,
+            '{quincena_nombre}' AS quincena,
+            COALESCE(SUM(n.total_pago), 0) AS total_pagado
+        FROM 
+            empleado e
+        LEFT JOIN 
+            nomina n ON e.id_empleado = n.id_empleado
+            AND DATE_FORMAT(n.fecha, '%Y-%m') = %s
+            AND DAY(n.fecha) BETWEEN %s AND %s
+        GROUP BY 
+            e.id_empleado
+        ORDER BY 
+            total_pagado DESC;
+    """
+    df = pd.read_sql(query, conn, params=(mes, dia_inicio, dia_fin))
+    conn.close()
+    return df
+
+# Reporte general: asistencia detallada con horas trabajadas
+def obtener_reporte_general():
+    conn = get_connection()
+    query = """
+        SELECT 
+            e.nombre,
+            e.apellido,
+            e.correo,
+            e.telefono,
+            e.puesto,
+            e.departamento,
+            e.rfc,
+            e.fecha_nac,
+            a.fecha,
+            a.hora_entrada,
+            a.hora_salida,
+            TIMESTAMPDIFF(MINUTE, a.hora_entrada, a.hora_salida)/60 AS horas_trabajadas
+        FROM 
+            empleado e
+        JOIN 
+            asistencia a ON e.id_empleado = a.id_empleado
+        ORDER BY 
+            a.fecha;
+    """
+    df = pd.read_sql(query, conn)
+    conn.close()
+    return df
+
+# Meses disponibles en asistencia
+def obtener_meses_asistencia():
+    conn = get_connection()
+    query = """
+        SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes 
+        FROM asistencia 
+        ORDER BY mes DESC;
+    """
+    df = pd.read_sql(query, conn)
+    conn.close()
+    return df["mes"].tolist()
+
+# Reporte mensual resumido por empleado
+def obtener_reporte_mensual(mes):
+    conn = get_connection()
+    query = """
+        SELECT 
+            e.id_empleado,
+            CONCAT(e.nombre, ' ', e.apellido) AS nombre_completo,
+            COUNT(DISTINCT a.fecha) AS dias_asistidos,
+            ROUND(SUM(
+                CASE 
+                    WHEN a.hora_entrada IS NOT NULL AND a.hora_salida IS NOT NULL 
+                    THEN TIMESTAMPDIFF(MINUTE, a.hora_entrada, a.hora_salida) 
+                    ELSE 0 
+                END
+            ) / 60, 2) AS horas_totales,
+            ROUND(AVG(
+                CASE 
+                    WHEN a.hora_entrada IS NOT NULL AND a.hora_salida IS NOT NULL 
+                    THEN TIMESTAMPDIFF(MINUTE, a.hora_entrada, a.hora_salida) 
+                    ELSE NULL
+                END
+            ) / 60, 2) AS horas_promedio_dia
+        FROM 
+            empleado e
+        LEFT JOIN 
+            asistencia a ON e.id_empleado = a.id_empleado
+            AND DATE_FORMAT(a.fecha, '%Y-%m') = %s
+        GROUP BY 
+            e.id_empleado
+        ORDER BY 
+            nombre_completo;
+    """
+    df = pd.read_sql(query, conn, params=(mes,))
+    conn.close()
+    df.fillna(0, inplace=True)
+    return df
+
+def obtener_total_pagado_por_departamento(mes):
+    conn = get_connection()
+    query = """
+        SELECT 
+            e.departamento,
+            COALESCE(SUM(n.total_pago), 0) AS total_pagado
+        FROM 
+            empleado e
+        LEFT JOIN 
+            nomina n ON e.id_empleado = n.id_empleado 
+            AND DATE_FORMAT(n.fecha, '%Y-%m') = %s
+        GROUP BY 
+            e.departamento
+        ORDER BY 
+            total_pagado DESC;
+    """
+    df = pd.read_sql(query, conn, params=(mes,))
+    conn.close()
+    return df
+
