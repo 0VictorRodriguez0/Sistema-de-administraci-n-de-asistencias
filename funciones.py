@@ -2,7 +2,9 @@
 from datetime import datetime
 import mysql.connector
 import streamlit as st
+import datetime
 import pandas as pd
+import numpy as np
 
 # Configurar conexión
 def get_connection():
@@ -10,7 +12,7 @@ def get_connection():
         host="localhost",
         user="root",
         password="",
-        database="crud_empleados"
+        database="empleados"
     )
 
 # Funciones CRUD
@@ -324,3 +326,122 @@ def obtener_total_pagado_por_departamento(mes):
     conn.close()
     return df
 
+
+#Funcion creda para obtneer los datos para el analisis
+def obtener_asistencias():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT a.id_asistencia, a.fecha, a.hora_entrada, a.hora_salida, e.nombre, e.apellido, e.puesto, e.departamento
+        FROM empleado e 
+        JOIN  asistencia a ON e.id_empleado = a.id_empleado
+    """)
+    asistencias = cursor.fetchall()
+    conn.close()
+    return asistencias
+
+#Funcion regresa un DB con datos de los puestos y pagos por hora
+def puestos():
+    # Datos actualizados con departamento
+    datos = {
+        "puesto": [
+            "Maestro Repostero",
+            "Ayudante de Repostería",
+            "Vendedor Mostrador",
+            "Repartidor",
+            "Encargado Administrativo",
+            "Community Manager",
+            "Encargado de Limpieza"
+        ],
+        "departamento": [
+            "Cocina",
+            "Cocina",
+            "Ventas",
+            "Ventas",
+            "Oficina",
+            "Marketing",
+            "Limpieza"
+        ],
+        "pago_hora": [80, 50, 55, 50, 70, 60, 45]
+    }
+
+    # Crear DataFrame
+    df_puestos = pd.DataFrame(datos)
+    return df_puestos
+
+def obtener_pago_por_semana():
+    asistencias = obtener_asistencias()
+
+    # Crear el DataFrame de pandas
+    df = pd.DataFrame(asistencias, columns=['id_asistencia', 'fecha', 'hora_entrada', 'hora_salida', 'nombre', 'apellido', 'puesto', 'departamento'])
+    # Calcular horas trabajadas (como entero)
+    df['horas_trabajadas'] = (df['hora_salida'] - df['hora_entrada']).apply(lambda x: int(x.total_seconds() // 3600))
+    # Convertir las columnas de hora_entrada y hora_salida a formato de hora, minuto, segundo
+    df['hora_entrada'] = df['hora_entrada'].apply(lambda x: str(x).split()[2])  # Obtener solo la parte de la hora
+    df['hora_salida'] = df['hora_salida'].apply(lambda x: str(x).split()[2])  # Obtener solo la parte de la hora
+    df = df.sort_values(by='id_asistencia').reset_index(drop=True)
+
+    # Asegurarse de que 'fecha' sea tipo datetime
+    df['fecha'] = pd.to_datetime(df['fecha'])
+
+    # Agrupar por nombre, apellido y puesto por semana
+    horas_por_semana = df.set_index('fecha').groupby(['nombre', 'apellido', 'puesto', pd.Grouper(freq='W')])['horas_trabajadas'].sum().reset_index()
+
+    df_puestos = puestos()
+    ingresos_por_semana = horas_por_semana.merge(df_puestos, on='puesto')
+    ingresos_por_semana['ingreso_semana'] = ingresos_por_semana['horas_trabajadas'] * ingresos_por_semana['pago_hora']
+
+    return ingresos_por_semana
+
+def obtener_pago_por_quincena():
+    asistencias = obtener_asistencias()
+
+    # Crear el DataFrame de pandas
+    df = pd.DataFrame(asistencias, columns=['id_asistencia', 'fecha', 'hora_entrada', 'hora_salida', 'nombre', 'apellido', 'puesto', 'departamento'])
+    # Calcular horas trabajadas (como entero)
+    df['horas_trabajadas'] = (df['hora_salida'] - df['hora_entrada']).apply(lambda x: int(x.total_seconds() // 3600))
+    # Convertir las columnas de hora_entrada y hora_salida a formato de hora, minuto, segundo
+    df['hora_entrada'] = df['hora_entrada'].apply(lambda x: str(x).split()[2])  # Obtener solo la parte de la hora
+    df['hora_salida'] = df['hora_salida'].apply(lambda x: str(x).split()[2])  # Obtener solo la parte de la hora
+    df = df.sort_values(by='id_asistencia').reset_index(drop=True)
+
+    # Asegurarse de que 'fecha' sea tipo datetime
+    df['fecha'] = pd.to_datetime(df['fecha'])
+
+    # Crear columna de quincena
+    df['quincena'] = df['fecha'].apply(lambda x: f"{x.year}-{x.month:02d}-Q1" if x.day <= 15 else f"{x.year}-{x.month:02d}-Q2")
+
+    # Agrupar por quincena
+    horas_por_quincena = df.groupby(['nombre', 'apellido', 'puesto', 'quincena'])['horas_trabajadas'].sum().reset_index()
+
+    df_puestos = puestos()
+    # Unir por puesto para QUINCENA
+    ingresos_por_quincena = horas_por_quincena.merge(df_puestos, on='puesto')
+    ingresos_por_quincena['ingreso_quincena'] = ingresos_por_quincena['horas_trabajadas'] * ingresos_por_quincena['pago_hora']
+
+    return ingresos_por_quincena
+
+
+def obtener_pago_por_mes():
+    asistencias = obtener_asistencias()
+
+    # Crear el DataFrame de pandas
+    df = pd.DataFrame(asistencias, columns=['id_asistencia', 'fecha', 'hora_entrada', 'hora_salida', 'nombre', 'apellido', 'puesto', 'departamento'])
+    # Calcular horas trabajadas (como entero)
+    df['horas_trabajadas'] = (df['hora_salida'] - df['hora_entrada']).apply(lambda x: int(x.total_seconds() // 3600))
+    # Convertir las columnas de hora_entrada y hora_salida a formato de hora, minuto, segundo
+    df['hora_entrada'] = df['hora_entrada'].apply(lambda x: str(x).split()[2])  # Obtener solo la parte de la hora
+    df['hora_salida'] = df['hora_salida'].apply(lambda x: str(x).split()[2])  # Obtener solo la parte de la hora
+    df = df.sort_values(by='id_asistencia').reset_index(drop=True)
+
+    # Asegurarse de que 'fecha' sea tipo datetime
+    df['fecha'] = pd.to_datetime(df['fecha'])
+
+    # Agrupar por mes
+    horas_por_mes = df.set_index('fecha').groupby(['nombre', 'apellido', 'puesto', pd.Grouper(freq='M')])['horas_trabajadas'].sum().reset_index()
+
+    df_puestos = puestos()
+    # Unir por puesto para MES
+    ingresos_por_mes = horas_por_mes.merge(df_puestos, on='puesto')
+    ingresos_por_mes['ingreso_mes'] = ingresos_por_mes['horas_trabajadas'] * ingresos_por_mes['pago_hora']
+    return ingresos_por_mes

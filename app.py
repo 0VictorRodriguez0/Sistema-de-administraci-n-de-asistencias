@@ -3,8 +3,9 @@ import unicodedata
 import datetime
 import random
 import pandas as pd
+import numpy as np
 import plotly.express as px
-from funciones import agregar_empleado, obtener_empleados, eliminar_empleado, actualizar_empleado, verificar_login, get_connection
+from funciones import agregar_empleado, obtener_empleados, eliminar_empleado, actualizar_empleado, verificar_login, get_connection, obtener_asistencias,  puestos, obtener_pago_por_semana, obtener_pago_por_quincena, obtener_pago_por_mes
 
 # Streamlit
 st.set_page_config(page_title="CRUD Empleados", layout="centered")
@@ -199,41 +200,64 @@ else:
         from funciones import (
             obtener_total_pagado_mes,
             obtener_total_pagado_por_departamento,
-            obtener_meses_nomina
+            obtener_meses_nomina,
+            obtener_pago_por_mes
         )
-
         st.subheader("Dashboard de Salarios")
 
         try:
-            meses_disponibles = obtener_meses_nomina()
-            if not meses_disponibles:
+            
+            meses_disponibles = obtener_pago_por_mes()
+            print('sola')
+            if meses_disponibles.empty:
                 st.info("No hay registros de nómina disponibles.")
+                print('sigma')
             else:
-                mes_reciente = meses_disponibles[0]  # más reciente por orden DESC
-
+                # mes_reciente = meses_disponibles[0]  # más reciente por orden DESC
                 # Gráfico de barras por empleado
-                df_salarios = obtener_total_pagado_mes(mes_reciente)
+                print("HOLA")
+                df_salarios = obtener_pago_por_mes()
 
-                if not df_salarios.empty:
+                # Agrupar por mes y sumar ingreso_mes
+                df_por_mes = df_salarios.groupby(df_salarios['fecha'].dt.to_period('M')).agg({'ingreso_mes': 'sum'}).reset_index()
+
+                # Convertir el periodo de nuevo a string o datetime para graficar
+                df_por_mes['fecha'] = df_por_mes['fecha'].dt.to_timestamp()
+
+                # Graficar
+                if not df_por_mes.empty:
                     fig = px.bar(
-                        df_salarios,
-                        x="id_empleado",
-                        y="total_pagado",
-                        title=f"Total Pagado por Empleado en {mes_reciente}"
+                        df_por_mes,
+                        x="fecha",
+                        y="ingreso_mes",
+                        title="Total Pagado por Mes"
                     )
                     st.plotly_chart(fig)
                 else:
-                    st.info(f"No hay pagos registrados en {mes_reciente}.")
+                    st.info("No hay pagos registrados")
+
+                fecha_mas_reciente = df_salarios['fecha'].max()
+                df_salarios_reciente = df_salarios[df_salarios['fecha'] == fecha_mas_reciente]
+                if not df_salarios_reciente.empty:
+                    fig = px.bar(
+                        df_salarios_reciente,
+                        x="nombre",
+                        y="ingreso_mes",
+                        title=f"Total Pagado por Empleados {fecha_mas_reciente}"
+                    )
+                    st.plotly_chart(fig)
+                else:
+                    st.info(f"No hay pagos registrados")
 
                 # Gráfico de pastel por departamento
-                df_departamentos = obtener_total_pagado_por_departamento(mes_reciente)
+                df_departamentos = df_salarios_reciente
 
                 if not df_departamentos.empty:
                     pie_chart = px.pie(
                         df_departamentos,
                         names="departamento",
-                        values="total_pagado",
-                        title=f"Distribución de Salarios por Departamento ({mes_reciente})",
+                        values="ingreso_mes",
+                        title=f"Distribución de Salarios por Departamento {fecha_mas_reciente}",
                         hole=0.3  # estilo de dona
                     )
                     pie_chart.update_traces(textposition='inside', textinfo='percent+label')
@@ -299,11 +323,13 @@ else:
             # Resumen de nómina mensual por empleado (con selector independiente)
             st.markdown("## Resumen de Nómina Mensual")
 
-            meses_nomina = obtener_meses_nomina()
-            mes_nomina = st.selectbox("Selecciona un mes de nómina", meses_nomina, key="mes_nomina")
+            meses_nomina = obtener_pago_por_mes()
+            meses_nomina['fecha'] = pd.to_datetime(meses_nomina['fecha']).dt.strftime('%Y-%m')
+            fechas_unicas = sorted(meses_nomina['fecha'].unique())
+            mes_nomina = st.selectbox("Selecciona un mes de nómina", fechas_unicas, key="mes_nomina")
 
             if mes_nomina:
-                df_nomina_mes = obtener_total_pagado_mes(mes_nomina)
+                df_nomina_mes = meses_nomina[meses_nomina['fecha'] == mes_nomina]
 
                 if not df_nomina_mes.empty:
                     st.dataframe(df_nomina_mes)
@@ -320,29 +346,25 @@ else:
 
             # Resumen de nómina quincenal por empleado (con selector propio)
             st.markdown("## Resumen de Nómina por Quincena")
+            quicenas_nomina = obtener_pago_por_quincena()
+            fechas_unicas_quincenas = sorted(quicenas_nomina['quincena'].unique())
+            quincena_nomina = st.selectbox("Selecciona un mes de quincena", fechas_unicas_quincenas, key="mes_quincena")
 
-            mes_quincena = st.selectbox("Selecciona un mes de quincena", meses_nomina, key="mes_quincena")
-            quincena_seleccionada = st.selectbox("Selecciona una quincena", ["1ra Quincena", "2da Quincena"])
-
-            if mes_quincena and quincena_seleccionada:
-                dia_inicio, dia_fin = (1, 15) if quincena_seleccionada == "1ra Quincena" else (16, 31)
-
-                df_nomina_quincena = obtener_total_pagado_quincena(
-                    mes_quincena, dia_inicio, dia_fin, quincena_seleccionada
-                )
+            if quincena_nomina:
+                df_nomina_quincena = quicenas_nomina[quicenas_nomina['quincena'] == quincena_nomina]
 
                 if not df_nomina_quincena.empty:
                     st.dataframe(df_nomina_quincena)
 
-                    csv_quincenal = df_nomina_quincena.to_csv(index=False).encode("utf-8")
+                    csv_nomina = df_nomina_quincena.to_csv(index=False).encode("utf-8")
                     st.download_button(
-                        label="Descargar Nómina Quincenal CSV",
-                        data=csv_quincenal,
-                        file_name=f"nomina_quincenal_{mes_quincena}_{quincena_seleccionada.replace(' ', '_')}.csv",
+                        label="Descargar Nómina quincenal CSV",
+                        data=csv_nomina,
+                        file_name=f"nomina_quincenal_{quincena_nomina}.csv",
                         mime="text/csv"
                     )
                 else:
-                    st.info("No hay datos de nómina para esta quincena.")
+                    st.info("No hay datos de nómina para este mes.")
 
         except Exception as e:
             st.error(f"Error al generar el reporte: {e}")
