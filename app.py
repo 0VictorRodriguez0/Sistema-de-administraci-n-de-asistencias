@@ -34,7 +34,7 @@ if not st.session_state["logged_in"]:
             st.warning("Por favor ingresa usuario y contraseña.")
 else:
     # Si el usuario está logueado, muestra el menú de operaciones
-    menu = st.sidebar.radio("Menú", ["Agregar Empleado", "Ver Empleados", "Dashboard Asistencia", "Dashboard Salarios", "Reporte"])
+    menu = st.sidebar.radio("### ☰ Menú de navegación", ["👷Agregar Empleado", "🧑‍🏭Ver Empleados", "🕒Dashboard Asistencia", "🧾Dashboard Salarios", "🔔Reporte"])
 
     # Cerrar sesión en la sidebar
     if st.sidebar.button("Cerrar sesión"):
@@ -44,7 +44,7 @@ else:
         # No es necesario recargar la página, el flujo se actualiza correctamente sin eso
 
     # Agregar empleado
-    if menu == "Agregar Empleado":
+    if menu == "👷Agregar Empleado":
         col1, col2 = st.columns(2)
         with col1:
             nombre = st.text_input("Nombre")
@@ -88,7 +88,7 @@ else:
                 st.warning("Completa todos los campos.")
 
     # Ver empleados
-    elif menu == "Ver Empleados":
+    elif menu == "🧑‍🏭Ver Empleados":
         st.subheader("Lista de Empleados")
         # Barra de búsqueda
         search_term = st.text_input("Buscar por nombre o apellido", "")
@@ -153,7 +153,7 @@ else:
                         st.rerun()  # Actualizar la página para reflejar los cambios
 
     # Dashboard de asistencia
-    elif menu == "Dashboard Asistencia":
+    elif menu == "🕒Dashboard Asistencia":
         from funciones import (
             obtener_totales_asistencia_por_fecha,
             obtener_promedio_horas_por_fecha
@@ -196,7 +196,7 @@ else:
 
 
              # Dashboard Salarios
-    elif menu == "Dashboard Salarios":
+    elif menu == "🧾Dashboard Salarios":
         from funciones import (
             obtener_total_pagado_mes,
             obtener_total_pagado_por_departamento,
@@ -269,7 +269,7 @@ else:
             st.error(f"Error al cargar el dashboard de salarios: {e}")
 
         # Reporte
-    elif menu == "Reporte":
+    elif menu == "🔔Reporte":
         from funciones import (
             obtener_reporte_general, 
             obtener_meses_asistencia, 
@@ -358,7 +358,7 @@ else:
 
                     csv_nomina = df_nomina_quincena.to_csv(index=False).encode("utf-8")
                     st.download_button(
-                        label="Descargar Nómina quincenal CSV",
+                        label="📊Descargar Nómina quincenal CSV",
                         data=csv_nomina,
                         file_name=f"nomina_quincenal_{quincena_nomina}.csv",
                         mime="text/csv"
