@@ -374,6 +374,11 @@ def obtener_pago_por_semana():
 
     # Crear el DataFrame de pandas
     df = pd.DataFrame(asistencias, columns=['id_asistencia', 'fecha', 'hora_entrada', 'hora_salida', 'nombre', 'apellido', 'puesto', 'departamento'])
+
+    #Eliminar nulos y datos con hora menor a 1 hora
+    df = df.dropna(subset=['hora_salida'])
+    df = df[(df['hora_salida'] - df['hora_entrada']) >= pd.Timedelta(hours=1)]
+
     # Calcular horas trabajadas (como entero)
     df['horas_trabajadas'] = (df['hora_salida'] - df['hora_entrada']).apply(lambda x: int(x.total_seconds() // 3600))
     # Convertir las columnas de hora_entrada y hora_salida a formato de hora, minuto, segundo
@@ -398,6 +403,10 @@ def obtener_pago_por_quincena():
 
     # Crear el DataFrame de pandas
     df = pd.DataFrame(asistencias, columns=['id_asistencia', 'fecha', 'hora_entrada', 'hora_salida', 'nombre', 'apellido', 'puesto', 'departamento'])
+
+    #Eliminar nulos y datos con hora menor a 1 hora
+    df = df.dropna(subset=['hora_salida'])
+    df = df[(df['hora_salida'] - df['hora_entrada']) >= pd.Timedelta(hours=1)]
     # Calcular horas trabajadas (como entero)
     df['horas_trabajadas'] = (df['hora_salida'] - df['hora_entrada']).apply(lambda x: int(x.total_seconds() // 3600))
     # Convertir las columnas de hora_entrada y hora_salida a formato de hora, minuto, segundo
@@ -427,6 +436,11 @@ def obtener_pago_por_mes():
 
     # Crear el DataFrame de pandas
     df = pd.DataFrame(asistencias, columns=['id_asistencia', 'fecha', 'hora_entrada', 'hora_salida', 'nombre', 'apellido', 'puesto', 'departamento'])
+
+    #Eliminar nulos y datos con hora menor a 1 hora
+    df = df.dropna(subset=['hora_salida'])
+    df = df[(df['hora_salida'] - df['hora_entrada']) >= pd.Timedelta(hours=1)]
+
     # Calcular horas trabajadas (como entero)
     df['horas_trabajadas'] = (df['hora_salida'] - df['hora_entrada']).apply(lambda x: int(x.total_seconds() // 3600))
     # Convertir las columnas de hora_entrada y hora_salida a formato de hora, minuto, segundo
