@@ -452,7 +452,7 @@ def obtener_pago_por_mes():
     df['fecha'] = pd.to_datetime(df['fecha'])
 
     # Agrupar por mes
-    horas_por_mes = df.set_index('fecha').groupby(['nombre', 'apellido', 'puesto', pd.Grouper(freq='M')])['horas_trabajadas'].sum().reset_index()
+    horas_por_mes = df.set_index('fecha').groupby(['nombre', 'apellido', 'puesto', pd.Grouper(freq='ME')])['horas_trabajadas'].sum().reset_index()
 
     df_puestos = puestos()
     # Unir por puesto para MES
